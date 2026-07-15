@@ -48,13 +48,23 @@ currency_full_names <- c(
 # Exchange rates based by rates on July 15, 2026, source is Google
 exchange_rates <- c(1.0, 61.64, 0.38, 82.89, 70.46, 9.10) 
 
+safe_readline <- function(prompt_text) {
+  cat(prompt_text)
+  flush.console()
+  line <- readLines("stdin", n = 1)
+  if (length(line) == 0) {
+    quit(save = "no")
+  }
+  return(trimws(line))
+}
+
 math_round <- function(number) {
   return(floor(number + 0.5))
 }
 
 ask_back_to_menu <- function() {
   repeat {
-    user_answer <- readline(prompt="Back to the Main Menu (Y/N): ")
+    user_answer <- safe_readline("Back to the Main Menu (Y/N): ")
     user_answer <- toupper(user_answer)
     
     if (user_answer == "Y") {
@@ -80,8 +90,7 @@ select_currency <- function(prompt_text, require_registered) {
     }
     
     cat("\n")
-    flush.console()
-    user_currency_choice <- as.integer(readline(prompt="Select Currency: "))
+    user_currency_choice <- as.integer(safe_readline("Select Currency: "))
     
     if (!is.na(user_currency_choice) && user_currency_choice == 0) {
       cat("Selection cancelled.\n")
@@ -112,8 +121,7 @@ repeat {
   cat("[0] Exit Application\n")
   
   cat("\n")
-  flush.console()
-  user_menu_choice <- as.integer(readline(prompt="Select Option: "))
+  user_menu_choice <- as.integer(safe_readline("Select Option: "))
   
   if (is.na(user_menu_choice)) {
     cat("Invalid option. Please enter a number from 0 to 7.\n\n")
@@ -122,7 +130,7 @@ repeat {
   
   if (user_menu_choice == 1) {
     cat("\nRegister Account Name\n")
-    new_account_name <- readline(prompt="Account Name: ")
+    new_account_name <- safe_readline("Account Name: ")
     
     if (new_account_name == "") {
       cat("Error: Account name cannot be empty. Please try again.\n\n")
@@ -150,7 +158,7 @@ repeat {
   
   else if (user_menu_choice == 2) {
     cat("\nDeposit Amount\n")
-    search_account_name <- readline(prompt="Enter Account Name: ")
+    search_account_name <- safe_readline("Enter Account Name: ")
     
     account_index <- match(toupper(search_account_name), toupper(account_names))
     
@@ -167,7 +175,7 @@ repeat {
       current_rate <- exchange_rates[deposit_currency_index]
       
       repeat {
-        deposit_amount_input <- as.numeric(readline(prompt=sprintf("Deposit Amount (in %s): ", currency_symbols[deposit_currency_index])))
+        deposit_amount_input <- as.numeric(safe_readline(sprintf("Deposit Amount (in %s): ", currency_symbols[deposit_currency_index])))
         
         if (!is.na(deposit_amount_input) && deposit_amount_input > 0) {
           converted_php_cents <- math_round(math_round(deposit_amount_input * 100) * current_rate)
@@ -195,7 +203,7 @@ repeat {
   
   else if (user_menu_choice == 3) {
     cat("\nWithdraw Amount\n")
-    search_account_name <- readline(prompt="Enter Account Name: ")
+    search_account_name <- safe_readline("Enter Account Name: ")
     
     account_index <- match(toupper(search_account_name), toupper(account_names))
     
@@ -212,7 +220,7 @@ repeat {
       current_rate <- exchange_rates[withdraw_currency_index]
       
       repeat {
-        withdraw_amount_input <- as.numeric(readline(prompt=sprintf("Withdraw Amount (in %s): ", currency_symbols[withdraw_currency_index])))
+        withdraw_amount_input <- as.numeric(safe_readline(sprintf("Withdraw Amount (in %s): ", currency_symbols[withdraw_currency_index])))
         
         if (!is.na(withdraw_amount_input) && withdraw_amount_input > 0) {
           converted_php_cents <- math_round(math_round(withdraw_amount_input * 100) * current_rate)
@@ -255,7 +263,7 @@ repeat {
       
       source_amount_to_convert <- NA
       repeat {
-        source_amount_input <- as.numeric(readline(prompt=sprintf("Source Amount (in %s): ", currency_symbols[source_currency_index])))
+        source_amount_input <- as.numeric(safe_readline(sprintf("Source Amount (in %s): ", currency_symbols[source_currency_index])))
         if (!is.na(source_amount_input) && source_amount_input > 0) {
           source_amount_to_convert <- source_amount_input
           break
@@ -274,7 +282,7 @@ repeat {
       cat(sprintf("\n%.2f %s = %.2f %s\n", source_amount_to_convert, currency_symbols[source_currency_index], target_converted_amount, currency_symbols[target_currency_index]))
       
       repeat {
-        convert_again_choice <- readline(prompt="Convert another currency? (Y/N): ")
+        convert_again_choice <- safe_readline("Convert another currency? (Y/N): ")
         convert_again_choice <- toupper(convert_again_choice)
         if (convert_again_choice == "Y" || convert_again_choice == "N") {
           break
@@ -305,7 +313,7 @@ repeat {
       next
     } else {
       repeat {
-        new_exchange_rate_input <- as.numeric(readline(prompt=sprintf("Enter exchange rate for %s (PHP per 1 %s): ", currency_symbols[record_currency_index], currency_symbols[record_currency_index])))
+        new_exchange_rate_input <- as.numeric(safe_readline(sprintf("Enter exchange rate for %s (PHP per 1 %s): ", currency_symbols[record_currency_index], currency_symbols[record_currency_index])))
         
         if (!is.na(new_exchange_rate_input) && new_exchange_rate_input > 0) {
           exchange_rates[record_currency_index] <- new_exchange_rate_input
@@ -326,7 +334,7 @@ repeat {
   
   else if (user_menu_choice == 6) {
     cat("\nShow Interest Amount\n")
-    search_account_name <- readline(prompt="Enter Account Name: ")
+    search_account_name <- safe_readline("Enter Account Name: ")
     
     account_index <- match(toupper(search_account_name), toupper(account_names))
     
@@ -337,7 +345,7 @@ repeat {
       
       total_number_of_days <- NA
       repeat {
-        days_input <- as.integer(readline(prompt="Total Number of Days: "))
+        days_input <- as.integer(safe_readline("Total Number of Days: "))
         if (!is.na(days_input) && days_input > 0) {
           total_number_of_days <- days_input
           break
@@ -372,7 +380,7 @@ repeat {
   
   else if (user_menu_choice == 7) {
     cat("\nView Account Balances\n")
-    search_account_name <- readline(prompt="Enter Account Name: ")
+    search_account_name <- safe_readline("Enter Account Name: ")
     
     account_index <- match(toupper(search_account_name), toupper(account_names))
     
