@@ -432,7 +432,7 @@ promptBack <- function() {
   while (TRUE) {
     raw_ans <- readInput("Back to Report Selection (Y/N): ")
     if (is.null(raw_ans)) {
-      cat("Exiting program. Goodbye!\n")
+      cat("Exiting program...\n")
       return(FALSE)
     }
     
