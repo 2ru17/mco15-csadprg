@@ -58,6 +58,19 @@ state$total_raw_rows <- 0
 state$parse_errors <- 0
 state$data_loaded <- FALSE
 
+# INPUT HELPER
+readInput <- function(promptText) {
+  if (interactive()) {
+    return(readline(prompt = promptText))
+  } else {
+    cat(promptText)
+    flush.console()
+    lines <- readLines("stdin", n = 1, warn = FALSE)
+    if (length(lines) == 0) return(NULL)
+    return(lines)
+  }
+}
+
 # FORMATTING HELPER
 formatNumber <- function(value, decimals) {
   formatC(value, format = "f", digits = decimals, big.mark = ",")
@@ -416,15 +429,14 @@ generateSummary <- function(projects) {
 
 # MAIN MENU
 promptBack <- function() {
-  if (!interactive()) return(FALSE)
-  
   while (TRUE) {
-    answer <- toupper(trimws(readline(prompt="Back to Report Selection (Y/N): ")))
-    if (is.na(answer) || answer == "") {
+    raw_ans <- readInput("Back to Report Selection (Y/N): ")
+    if (is.null(raw_ans)) {
       cat("Exiting program. Goodbye!\n")
       return(FALSE)
     }
     
+    answer <- toupper(trimws(raw_ans))
     if (answer == "Y") {
       return(TRUE)
     } else if (answer == "N") {
@@ -437,23 +449,21 @@ promptBack <- function() {
 }
 
 promptMenu <- function() {
-  if (!interactive()) {
-    loadData()
-    if (state$data_loaded) {
-      generateAllReports()
-    }
-    return(invisible(NULL))
-  }
-  
   while (TRUE) {
     cat("\nSelect Language Implementation:\n")
     cat("[1] Load the file\n")
     cat("[2] Generate Reports\n")
     cat("[0] Exit\n")
     
-    choice <- trimws(readline(prompt="Enter choice: "))
+    raw_choice <- readInput("Enter choice: ")
+    if (is.null(raw_choice)) {
+      cat("\nExiting program. Goodbye!\n")
+      break
+    }
     
-    if (is.na(choice) || choice == "" || choice == "0") {
+    choice <- trimws(raw_choice)
+    
+    if (choice == "0") {
       cat("\nExiting program. Goodbye!\n")
       break
     } else if (choice == "1") {
