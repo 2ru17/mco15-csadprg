@@ -251,12 +251,14 @@ generateReport1 <- function(projects) {
               padLeft("MedianSavings", 14), padLeft("AvgDelay", 10), 
               padLeft("HighDelayPct", 12), padLeft("EfficiencyScore", 15)))
   
-  for (i in 1:min(2, nrow(csv_df))) {
-    r <- csv_df[i, ]
-    cat(sprintf("| %s | %s | %s | %s | %s | %s | %s |\n", 
-                padRight(r$Region, 45), padRight(r$MainIsland, 10), padLeft(r$TotalBudget, 15), 
-                padLeft(r$MedianSavings, 14), padLeft(r$AvgDelay, 10), 
-                padLeft(r$HighDelayPct, 12), padLeft(r$EfficiencyScore, 15)))
+  if (nrow(csv_df) > 0) {
+    for (i in seq_len(min(2, nrow(csv_df)))) {
+      r <- csv_df[i, ]
+      cat(sprintf("| %s | %s | %s | %s | %s | %s | %s |\n", 
+                  padRight(r$Region, 45), padRight(r$MainIsland, 10), padLeft(r$TotalBudget, 15), 
+                  padLeft(r$MedianSavings, 14), padLeft(r$AvgDelay, 10), 
+                  padLeft(r$HighDelayPct, 12), padLeft(r$EfficiencyScore, 15)))
+    }
   }
   cat(sprintf("(Full table exported to %s)\n", REPORT1_FILE))
 }
@@ -306,14 +308,16 @@ generateReport2 <- function(projects) {
                 padLeft("NumProjects", 11), padLeft("AvgDelay", 10), padLeft("TotalSavings", 18), 
                 padLeft("ReliabilityIndex", 16), padLeft("RiskFlag", 10)))
     
-    for (i in 1:min(2, nrow(csv_df))) {
-      r <- csv_df[i, ]
-      # Truncate contractor string if too long for console display consistency
-      cont_str <- if(nchar(r$Contractor) > 45) paste0(substr(r$Contractor, 1, 42), "...") else r$Contractor
-      cat(sprintf("| %s | %s | %s | %s | %s | %s | %s | %s |\n", 
-                  padLeft(as.character(r$Rank), 4), padRight(cont_str, 45), padLeft(r$TotalCost, 18), 
-                  padLeft(as.character(r$NumProjects), 11), padLeft(r$AvgDelay, 10), 
-                  padLeft(r$TotalSavings, 18), padLeft(r$ReliabilityIndex, 16), padLeft(r$RiskFlag, 10)))
+    if (nrow(csv_df) > 0) {
+      for (i in seq_len(min(2, nrow(csv_df)))) {
+        r <- csv_df[i, ]
+        # Truncate contractor string if too long for console display consistency
+        cont_str <- if(nchar(r$Contractor) > 45) paste0(substr(r$Contractor, 1, 42), "...") else r$Contractor
+        cat(sprintf("| %s | %s | %s | %s | %s | %s | %s | %s |\n", 
+                    padLeft(as.character(r$Rank), 4), padRight(cont_str, 45), padLeft(r$TotalCost, 18), 
+                    padLeft(as.character(r$NumProjects), 11), padLeft(r$AvgDelay, 10), 
+                    padLeft(r$TotalSavings, 18), padLeft(r$ReliabilityIndex, 16), padLeft(r$RiskFlag, 10)))
+      }
     }
   } else {
     cat("Report 2: No contractors found with >= 5 projects.\n")
@@ -376,12 +380,14 @@ generateReport3 <- function(projects) {
               padRight("TypeOfWork", 50), padLeft("FundingYear", 11), padLeft("TotalProjects", 13), 
               padLeft("AvgSavings", 15), padLeft("OverrunRate", 11), padLeft("YoYChange", 11)))
   
-  for (i in 1:min(3, nrow(csv_df))) {
-    r <- csv_df[i, ]
-    tw <- if(nchar(r$TypeOfWork) > 50) paste0(substr(r$TypeOfWork, 1, 47), "...") else r$TypeOfWork
-    cat(sprintf("| %s | %s | %s | %s | %s | %s |\n", 
-                padRight(tw, 50), padLeft(as.character(r$FundingYear), 11), padLeft(as.character(r$TotalProjects), 13), 
-                padLeft(r$AvgSavings, 15), padLeft(r$OverrunRate, 11), padLeft(r$YoYChange, 11)))
+  if (nrow(csv_df) > 0) {
+    for (i in seq_len(min(3, nrow(csv_df)))) {
+      r <- csv_df[i, ]
+      tw <- if(nchar(r$TypeOfWork) > 50) paste0(substr(r$TypeOfWork, 1, 47), "...") else r$TypeOfWork
+      cat(sprintf("| %s | %s | %s | %s | %s | %s |\n", 
+                  padRight(tw, 50), padLeft(as.character(r$FundingYear), 11), padLeft(as.character(r$TotalProjects), 13), 
+                  padLeft(r$AvgSavings, 15), padLeft(r$OverrunRate, 11), padLeft(r$YoYChange, 11)))
+    }
   }
   cat(sprintf("(Full table exported to %s)\n", REPORT3_FILE))
 }
@@ -410,13 +416,20 @@ generateSummary <- function(projects) {
 
 # MAIN MENU
 promptBack <- function() {
+  if (!interactive()) return(FALSE)
+  
   while (TRUE) {
     answer <- toupper(trimws(readline(prompt="Back to Report Selection (Y/N): ")))
+    if (is.na(answer) || answer == "") {
+      cat("Exiting program. Goodbye!\n")
+      return(FALSE)
+    }
+    
     if (answer == "Y") {
       return(TRUE)
     } else if (answer == "N") {
       cat("Exiting program. Goodbye!\n")
-      quit(save="no", status=0)
+      return(FALSE)
     } else {
       cat("Invalid input. Please enter Y or N.\n")
     }
@@ -424,14 +437,23 @@ promptBack <- function() {
 }
 
 promptMenu <- function() {
+  if (!interactive()) {
+    loadData()
+    if (state$data_loaded) {
+      generateAllReports()
+    }
+    return(invisible(NULL))
+  }
+  
   while (TRUE) {
     cat("\nSelect Language Implementation:\n")
     cat("[1] Load the file\n")
     cat("[2] Generate Reports\n")
     cat("[0] Exit\n")
+    
     choice <- trimws(readline(prompt="Enter choice: "))
     
-    if (choice == "0") {
+    if (is.na(choice) || choice == "" || choice == "0") {
       cat("\nExiting program. Goodbye!\n")
       break
     } else if (choice == "1") {
