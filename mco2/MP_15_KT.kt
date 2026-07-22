@@ -66,8 +66,8 @@ data class Project(
     val fundingYear: Int,
     val approvedBudget: Double,
     val contractCost: Double,
-    val startDate: LocalDate?,
-    val actualCompletionDate: LocalDate?,
+    val startDate: LocalDate,
+    val actualCompletionDate: LocalDate,
     val contractor: String,
     var projectLat: Double,
     var projectLng: Double,
@@ -89,17 +89,25 @@ object State {
     var dataLoaded = false
 }
 
-// CSV PARSER
+// CSV PARSER 
 fun parseCsvLine(line: String): List<String> {
     val fields = mutableListOf<String>()
     var current = StringBuilder()
     var inQuotes = false
-
-    for (ch in line) {
+    var i = 0
+    
+    while (i < line.length) {
+        val ch = line[i]
+        
         when {
             inQuotes -> {
                 if (ch == '"') {
-                    inQuotes = false
+                    if (i + 1 < line.length && line[i + 1] == '"') {
+                        current.append('"')
+                        i++
+                    } else {
+                        inQuotes = false
+                    }
                 } else {
                     current.append(ch)
                 }
@@ -115,16 +123,36 @@ fun parseCsvLine(line: String): List<String> {
                 current.append(ch)
             }
         }
+        i++
     }
     fields.add(current.toString())
     return fields
 }
 
-// DATE UTILITIES
+// DATE UTILITIES - More strict validation
 fun parseDate(s: String): LocalDate? {
     return try {
-        if (s.isNotEmpty() && s != "null" && s != "N/A") {
-            LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE)
+        if (s.isNotEmpty() && s != "null" && s != "N/A" && s != "") {
+            val trimmed = s.trim()
+            // Try ISO format first (yyyy-MM-dd)
+            try {
+                return LocalDate.parse(trimmed, DateTimeFormatter.ISO_LOCAL_DATE)
+            } catch (e: Exception) {
+                // Try other formats
+                val formatters = listOf(
+                    DateTimeFormatter.ofPattern("M/d/yyyy"),
+                    DateTimeFormatter.ofPattern("M/d/yy"),
+                    DateTimeFormatter.ofPattern("yyyy-M-d")
+                )
+                for (formatter in formatters) {
+                    try {
+                        return LocalDate.parse(trimmed, formatter)
+                    } catch (e2: Exception) {
+                        // Continue to next formatter
+                    }
+                }
+            }
+            null
         } else null
     } catch (e: Exception) {
         null
@@ -140,7 +168,6 @@ fun formatNumber(value: Double, decimals: Int): String {
     val parts = formatted.split(".")
     val integerPart = parts[0]
     
-    // Add commas
     val withCommas = StringBuilder()
     for (i in integerPart.indices) {
         if (i > 0 && (integerPart.length - i) % 3 == 0) {
@@ -213,24 +240,74 @@ fun loadData() {
         State.totalRawRows++
         val fields = parseCsvLine(line)
 
+        // Skip rows with wrong number of fields
         if (fields.size < EXPECTED_COLUMNS) {
             State.parseErrors++
             continue
         }
 
         try {
+            // Validate required fields are non-empty
+            val region = fields[COL_REGION].trim()
+            val province = fields[COL_PROVINCE].trim()
+            val contractor = fields[COL_CONTRACTOR].trim()
+            val mainIsland = fields[COL_MAIN_ISLAND].trim()
+            val typeOfWork = fields[COL_TYPE_OF_WORK].trim()
+            
+            if (region.isEmpty() || province.isEmpty() || contractor.isEmpty() || 
+                mainIsland.isEmpty() || typeOfWork.isEmpty()) {
+                State.parseErrors++
+                continue
+            }
+
             val fundingYear = fields[COL_FUNDING_YEAR].trim().toIntOrNull()
             if (fundingYear == null || fundingYear !in 2021..2023) {
                 State.parseErrors++
                 continue
             }
 
-            val approvedBudget = fields[COL_APPROVED_BUDGET].trim().toDoubleOrNull() ?: 0.0
-            val contractCost = fields[COL_CONTRACT_COST].trim().toDoubleOrNull() ?: 0.0
+            val approvedBudgetStr = fields[COL_APPROVED_BUDGET].trim()
+            val contractCostStr = fields[COL_CONTRACT_COST].trim()
+            
+            if (approvedBudgetStr.isEmpty() || contractCostStr.isEmpty()) {
+                State.parseErrors++
+                continue
+            }
+            
+            val approvedBudget = approvedBudgetStr.toDoubleOrNull()
+            val contractCost = contractCostStr.toDoubleOrNull()
+            
+            if (approvedBudget == null || contractCost == null || 
+                approvedBudget < 0 || contractCost < 0) {
+                State.parseErrors++
+                continue
+            }
 
-            val startDate = parseDate(fields[COL_START_DATE].trim())
-            val actualCompletionDate = parseDate(fields[COL_ACTUAL_COMPLETION].trim())
+            val startDateStr = fields[COL_START_DATE].trim()
+            val actualCompletionStr = fields[COL_ACTUAL_COMPLETION].trim()
+            
+            if (startDateStr.isEmpty() || actualCompletionStr.isEmpty()) {
+                State.parseErrors++
+                continue
+            }
+            
+            val startDate = parseDate(startDateStr)
+            val actualCompletionDate = parseDate(actualCompletionStr)
+            
             if (startDate == null || actualCompletionDate == null) {
+                State.parseErrors++
+                continue
+            }
+
+            // Validate dates are in a reasonable range
+            if (startDate.year < 2000 || actualCompletionDate.year < 2000 ||
+                startDate.year > 2025 || actualCompletionDate.year > 2025) {
+                State.parseErrors++
+                continue
+            }
+
+            // Validate that completion date is after start date (or at least reasonable)
+            if (actualCompletionDate.isBefore(startDate)) {
                 State.parseErrors++
                 continue
             }
@@ -243,16 +320,16 @@ fun loadData() {
 
             rawProjects.add(
                 Project(
-                    mainIsland = fields[COL_MAIN_ISLAND].trim(),
-                    region = fields[COL_REGION].trim(),
-                    province = fields[COL_PROVINCE].trim(),
-                    typeOfWork = fields[COL_TYPE_OF_WORK].trim(),
+                    mainIsland = mainIsland,
+                    region = region,
+                    province = province,
+                    typeOfWork = typeOfWork,
                     fundingYear = fundingYear,
                     approvedBudget = approvedBudget,
                     contractCost = contractCost,
                     startDate = startDate,
                     actualCompletionDate = actualCompletionDate,
-                    contractor = fields[COL_CONTRACTOR].trim(),
+                    contractor = contractor,
                     projectLat = projectLat,
                     projectLng = projectLng,
                     costSavings = costSavings,
