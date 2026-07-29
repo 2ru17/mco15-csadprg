@@ -1,0 +1,5 @@
+Programming languages are essential for software development.
+Different programming languages support different paradigms, such as object-oriented, functional, and procedural.
+Kotlin and Rust are statically typed languages. Javascript and R are dynamically typed languages.
+Rust offers strict memory safety. Javascript is ubiquitous in web development.
+Kotlin is great for Android. R is powerful for data analysis and statistics.

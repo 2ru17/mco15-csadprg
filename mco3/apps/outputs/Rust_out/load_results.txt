@@ -1,0 +1,4 @@
+Dead Load: 150.50
+Live Load: 85.00
+Total Pillars: 4
+Load per Pillar: 79.15
